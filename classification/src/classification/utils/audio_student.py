@@ -183,26 +183,24 @@ class AudioUtil:
         """
         sig, sr = audio
         ### quoicoubeh
-
         ### TO COMPLETE
+
+        # Each entry identifies one sound in the dataset.
+        choices = [
+        (cls, index)
+        for cls in dataset.list_classes()
+        for index in range(dataset.naudio[cls])
+        ]
+
         for _ in range(num_sources):
-            # Randomly choose a class and an audio file from the dataset
-            random_class = random.choice(dataset.list_classes())
-            random_index = random.randint(0, dataset.naudio[random_class] - 1)
-            random_audio_file = dataset[random_class][random_index]
+            cls_index = random.choice(choices)
+            bg_path = dataset[cls_index]
+            bg = AudioUtil.open(bg_path)
+            bg = AudioUtil.resample(bg, sr)
+            bg = AudioUtil.pad_trunc(bg, 5000)
+            bg_audio, bg_sr =bg
 
-            # Load the audio file
-            bg_audio = AudioUtil.open(random_audio_file)
-
-            # Resample and pad/truncate the background audio
-            bg_audio = AudioUtil.resample(bg_audio, sr)
-            bg_audio = AudioUtil.pad_trunc(bg_audio, max_ms)
-
-            # Scale the background audio
-            bg_audio = AudioUtil.scaling(bg_audio, scaling_limit=amplitude_limit)
-
-            # Add the background audio to the original signal
-            sig += bg_audio[0]  
+            sig += bg_audio
 
         return (sig, sr)
 
