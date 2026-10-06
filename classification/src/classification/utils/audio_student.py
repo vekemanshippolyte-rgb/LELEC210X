@@ -7,7 +7,7 @@ import sounddevice as sd
 import soundfile as sf
 from matplotlib import patches
 from numpy import ndarray
-from scipy.signal import fftconvolve
+from scipy.signal import fftconvolve, resample
 
 # -----------------------------------------------------------------------------
 """
@@ -65,6 +65,7 @@ class AudioUtil:
         sig, sr = audio
 
         ### TO COMPLETE
+        resig = resample(sig, int(len(sig) / sr * newsr))
 
         return (resig, newsr)
 
@@ -109,8 +110,10 @@ class AudioUtil:
         sig, sr = audio
 
         ### TO COMPLETE
+        factor = np.random.uniform(1 / scaling_limit, scaling_limit)
+        sig = sig * factor
 
-        return audio
+        return (sig, sr)
 
     def add_noise(audio, sigma=0.05) -> tuple[ndarray, int]:
         """
@@ -122,8 +125,10 @@ class AudioUtil:
         sig, sr = audio
 
         ### TO COMPLETE
+        noise = np.random.normal(0, sigma, sig.shape)
+        sig = sig + noise
 
-        return audio
+        return (sig, sr)
 
     def echo(audio, nechos=2) -> tuple[ndarray, int]:
         """
@@ -153,6 +158,14 @@ class AudioUtil:
         sig, sr = audio
 
         ### TO COMPLETE
+        spectrum = np.fft.fft(sig)
+        if len(filt) != len(spectrum):
+            if len(filt)==len(spectrum)//2+1:
+                filt = np.concatenate((filt, filt[-2:0:-1]))
+            else:
+                raise ValueError("Filter length must be equal to the signal length or half of it plus one.")
+        filtered_spectrum = spectrum * filt
+        sig = np.fft.ifft(filtered_spectrum).real
 
         return (sig, sr)
 
@@ -183,6 +196,19 @@ class AudioUtil:
         :param fs2: The sampling frequency.
         """
         ### TO COMPLETE
+        sig, sr = AudioUtil.resample(audio, fs2)
+        L = len(sig)
+        sig = sig[: L - L % Nft]
+        L = len(sig)
+        "Reshape the signal with a piece for each row"
+        audiomat = np.reshape(sig, (L // Nft, Nft))
+        audioham = audiomat * np.hamming(Nft)  # Windowing. Hamming, Hanning, Blackman,..
+        z = np.reshape(audioham, -1)  # y windowed by pieces
+        "FFT row by row"
+        stft = np.fft.fft(audioham, axis=1)
+        stft = np.abs(
+            stft[:, : Nft // 2].T
+        )
         # stft /= float(2**8)
         return stft
 
@@ -210,7 +236,16 @@ class AudioUtil:
         :param fs2: The sampling frequency.
         """
         ### TO COMPLETE
+        audio = AudioUtil.resample(audio, fs2)
+        stft = AudioUtil.specgram(audio, Nft)
 
+        # À adapter à la fonction/matrice Hz2Mel fournie dans le notebook
+        mels = librosa.filters.mel(sr=fs2, n_fft=Nft, n_mels=Nmel)
+        mels = mels[:, :-1]
+        
+        ### Normalize the mels matrix such that its maximum value is one.
+        mels = mels / np.max(mels)
+        melspec = mels @ stft
         return melspec
 
     def spectro_aug_timefreq_masking(
