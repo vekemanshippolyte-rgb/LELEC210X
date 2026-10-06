@@ -170,7 +170,7 @@ class AudioUtil:
         return (sig, sr)
 
     def add_bg(
-        self, dataset, num_sources=1, max_ms=5000, amplitude_limit=0.1
+        audio, dataset, num_sources=1, max_ms=5000, amplitude_limit=0.1
     ) -> tuple[ndarray, int]:
         """
         Adds up sounds uniformly chosen at random to audio.
@@ -184,8 +184,26 @@ class AudioUtil:
         sig, sr = audio
 
         ### TO COMPLETE
+        for _ in range(num_sources):
+            # Randomly choose a class and an audio file from the dataset
+            random_class = random.choice(dataset.list_classes())
+            random_index = random.randint(0, dataset.naudio[random_class] - 1)
+            random_audio_file = dataset[random_class][random_index]
 
-        return audio
+            # Load the audio file
+            bg_audio = AudioUtil.open(random_audio_file)
+
+            # Resample and pad/truncate the background audio
+            bg_audio = AudioUtil.resample(bg_audio, sr)
+            bg_audio = AudioUtil.pad_trunc(bg_audio, max_ms)
+
+            # Scale the background audio
+            bg_audio = AudioUtil.scaling(bg_audio, scaling_limit=amplitude_limit)
+
+            # Add the background audio to the original signal
+            sig += bg_audio[0]  
+
+        return (sig, sr)
 
     def specgram(audio, Nft=512, fs2=11025) -> ndarray:
         """
