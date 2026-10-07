@@ -182,8 +182,25 @@ class AudioUtil:
         :param amplitude_limit: The maximum amplitude of the added sounds.
         """
         sig, sr = audio
-
+        ### quoicoubeh
         ### TO COMPLETE
+
+        # Each entry identifies one sound in the dataset.
+        choices = [
+        (cls, index)
+        for cls in dataset.list_classes()
+        for index in range(dataset.naudio[cls])
+        ]
+
+        for _ in range(num_sources):
+            cls_index = random.choice(choices)
+            bg_path = dataset[cls_index]
+            bg = AudioUtil.open(bg_path)
+            bg = AudioUtil.resample(bg, sr)
+            bg = AudioUtil.pad_trunc(bg, 5000)
+            bg_audio, bg_sr =bg
+
+            sig += bg_audio
 
         return (sig, sr)
 
@@ -288,7 +305,7 @@ class Feature_vector_DS:
         Nft=512,
         nmel=20,
         duration=500,
-        normalize=False,
+        normalize=True,
         data_aug=None,
         pca=None,
         step=np.inf,
