@@ -12,12 +12,16 @@ volatile uint16_t *samples_buf_to_process; // Pointer to the buffer to process
 volatile uint8_t is_processing = 0; // State variable to signal main loop and prevent timing constraint violation
 
 // Local variables
-//static uint16_t samples_single_buf[10000]; // Single buffer for raw samples
+// Double buffer for raw samples
+static volatile uint16_t samples_double_buf [2* SAMPLES_PER_MELVEC ];
+// These are simply pointers to the first and middle element of double buf
+static volatile uint16_t * samples_buf [2] = {& samples_double_buf [0] ,
+	& samples_double_buf [ SAMPLES_PER_MELVEC ]};
 static volatile uint8_t is_acq_running = 0; // State variable to prevent re-entering acquisition start or stop
 
 // External variables
 extern ADC_HandleTypeDef hadc1;
-//extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim3;
 
 /*
  * @brief Start the acquisition of audio samples.
@@ -32,6 +36,9 @@ int acquisition_start(void)
 	is_acq_running = 1;
 
 	// TODO P2b
+	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+	HAL_TIM_Base_Start(&htim3);
+	HAL_ADC_Start_DMA(&hadc1, (uint32_t *)samples_double_buf, 2*SAMPLES_PER_MELVEC);
 
 	return 0;
 }
@@ -48,6 +55,9 @@ int acquisition_stop(void)
 	}
 
 	// TODO P2b
+	HAL_TIM_Base_Stop(&htim3);
+	HAL_ADC_Stop(&hadc1);
+	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
 	is_acq_running = 0;
 	return 0;
@@ -70,7 +80,29 @@ void print_raw_samples(uint16_t *samples, size_t length)
 #endif // DEBUGP
 }
 
+/*
+* @brief Callback when one of the two buffers is ready for processing .
+* @param [in] buf_cplt Buffer ready index (0 or 1).
+*/
+static void process_samples_buf (int buf_cplt )
+{
+	if ( is_processing ) { // check if the other buffer is still processing
+		DEBUG_PRINT (" Error : Samples buffer full ( timing constraint violation )\r\n") ;
+		Error_Handler();
+	}
+	samples_buf_to_process = samples_buf [ buf_cplt ];
+	is_processing = 1;
+}
+
+
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
 	// TODO P2b
+	process_samples_buf(1);
+
+}
+
+void HAL_ADC_ConvHalfCpltCallback ( ADC_HandleTypeDef *hadc )
+{
+	process_samples_buf(0);
 }

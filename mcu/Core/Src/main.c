@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "dma.h"
 #include "spi.h"
 #include "tim.h"
 #include "gpio.h"
@@ -73,8 +74,7 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-extern ADC_HandleTypeDef hadc1;
-extern TIM_HandleTypeDef htim3;
+
 /*
  * @brief Manages external interrupts : user button and S2LP radio.
  * @note This overrides the __weak__ function in stm32l4xx_hal_gpio.c to provide an user implementation.
@@ -82,29 +82,12 @@ extern TIM_HandleTypeDef htim3;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == B1_Pin) { // User button
-
-		HAL_NVIC_DisableIRQ(EXTI15_10_IRQn); // Prevent re-entry, only one execution per button press
-		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
-		size_t sample_count = 10000;
-		uint16_t samples[sample_count];
-
-		HAL_ADC_Start(&hadc1); // configure and launch single conversion
-		HAL_TIM_Base_Start(&htim3);
-		for (uint32_t i=0; i < sample_count; ++i) {
-
-			HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY); // wait for conversion
-			samples[i] = (uint16_t) HAL_ADC_GetValue(&hadc1); // read converted value
-
+		if (acquisition_start()) {
+			printf("Acquisition not started, already running\r\n");
 		}
-		HAL_TIM_Base_Stop(&htim3);
-		HAL_ADC_Stop(&hadc1); // reset configuration
-		print_raw_samples(samples, sample_count);
-
-        __HAL_GPIO_EXTI_CLEAR_FLAG(B1_Pin);
-        HAL_NVIC_ClearPendingIRQ(EXTI15_10_IRQn);
-        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-        HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
+		else {
+			printf("Acquisition started\r\n");
+		}
 	}
 	else if (GPIO_Pin == RADIO_INT_Pin) { // S2LP radio, will be used in P2d
 		S2LP_IRQ_Handler();
@@ -141,6 +124,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_SPI1_Init();
   MX_ADC1_Init();
   MX_TIM3_Init();
@@ -168,6 +152,20 @@ int main(void)
   /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+		if ( is_processing ) {
+			melvec_compute (( q15_t *) samples_buf_to_process , mel_vectors[cur_melvec]) ;
+			is_processing = 0;
+			if (++cur_melvec == N_MELVECS){
+				cur_melvec = 0;
+				acquisition_stop();
+				print_melvectors(mel_vectors, N_MELVECS);
+
+			#if CONTINUOUS_ACQ
+				acquisition_start();
+			#endif
+			}
+		}
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
