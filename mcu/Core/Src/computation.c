@@ -37,9 +37,9 @@ void melvec_compute(q15_t *samples, q15_t *melvec)
 
 	// /!\ When multiplying/dividing by a power 2, always prefer shifting left/right instead, ARM instructions to do so are more efficient.
 	// Here we should shift left by 3.
-
+	start_cycle_count();
 	arm_shift_q15(samples, 3, samples, SAMPLES_PER_MELVEC);
-
+	stop_cycle_count("step 0");
 	// STEP 0.2 : Remove DC Component
 	//            --> Pointwise substract
 	//            Complexity: O(N)
@@ -47,17 +47,18 @@ void melvec_compute(q15_t *samples, q15_t *melvec)
 
 	// Since we use a signed representation, we should now center the value around zero, we can do this by substracting 2**14.
 	// Now the value of buf[i] is in [-2**14 , 2**14 - 1]
-
+	start_cycle_count();
 	for(uint16_t i=0; i < SAMPLES_PER_MELVEC; i++) { // Remove DC component
 		samples[i] -= (1 << 14);
 	}
-
+	stop_cycle_count("step0.2");
 	// STEP 1  : Windowing of input samples
 	//           --> Pointwise product
 	//           Complexity: O(N)
 	//           Number of cycles: <TODO>
+	start_cycle_count();
 	arm_mult_q15(samples, hamming_window, buf, SAMPLES_PER_MELVEC);
-
+	stop_cycle_count("step1");
 	// STEP 2  : Discrete Fourier Transform
 	//           --> In-place Fast Fourier Transform (FFT) on a real signal
 	//           --> We only keep positive frequencies (symmetry) in the next operations.
@@ -65,12 +66,13 @@ void melvec_compute(q15_t *samples, q15_t *melvec)
 	//           Number of cycles: <TODO>
 
 	// Since the FFT is a recursive algorithm, the values are rescaled in the function to ensure that overflow cannot happen.
+	start_cycle_count();
 	arm_rfft_instance_q15 rfft_inst;
 
 	arm_rfft_init_q15(&rfft_inst, SAMPLES_PER_MELVEC, 0, 1);
 
 	arm_rfft_q15(&rfft_inst, buf, buf_fft);
-
+	stop_cycle_count("step2");
 	// STEP 3  : Compute the complex magnitude of the FFT
 	//           Because the FFT can output a great proportion of very small values,
 	//           we should rescale all values by their maximum to avoid loss of precision when computing the complex magnitude
@@ -82,34 +84,34 @@ void melvec_compute(q15_t *samples, q15_t *melvec)
 
 	q15_t vmax;
 	uint32_t pIndex=0;
-
+	start_cycle_count();
 	arm_absmax_q15(buf_fft, SAMPLES_PER_MELVEC, &vmax, &pIndex);
-
+	stop_cycle_count("step3");
 	// STEP 3.2: Normalize the vector - Dynamic range increase
 	//           Complexity: O(N)
 	//           Number of cycles: <TODO>
-
+	start_cycle_count();
 	for (int i=0; i < SAMPLES_PER_MELVEC; i++) // We don't use the second half of the symmetric spectrum
 	{
 		buf[i] = (q15_t) (((q31_t) buf_fft[i] << 15) /((q31_t)vmax));
 	}
-
+	stop_cycle_count("step3.2");
 	// STEP 3.3: Compute the complex magnitude
 	//           --> The output buffer is now two times smaller because (real|imag) --> (mag)
 	//           Complexity: O(N)
 	//           Number of cycles: <TODO>
-
+	start_cycle_count();
 	arm_cmplx_mag_q15(buf, buf, SAMPLES_PER_MELVEC/2);
-
+	stop_cycle_count("step3.3");
 	// STEP 3.4: Denormalize the vector
 	//           Complexity: O(N)
 	//           Number of cycles: <TODO>
-
+	start_cycle_count();
 	for (int i=0; i < SAMPLES_PER_MELVEC/2; i++)
 	{
 		buf[i] = (q15_t) ((((q31_t) buf[i]) * ((q31_t) vmax) ) >> 15 );
 	}
-
+	stop_cycle_count("step3.4");
 	// STEP 4:   Apply MEL transform
 	//           --> Fast Matrix Multiplication
 	//           Complexity: O(Nmel*N)
@@ -122,7 +124,7 @@ void melvec_compute(q15_t *samples, q15_t *melvec)
 
 	// /!\ In order to avoid overflows completely the input signals should be scaled down. Scale down one of the input matrices by log2(numColsA) bits to avoid overflows,
 	// as a total of numColsA additions are computed internally for each output element. Because our hz2mel_mat matrix contains lots of zeros in its rows, this is not necessary.
-
+	start_cycle_count();
 	arm_matrix_instance_q15 hz2mel_inst, fftmag_inst, melvec_inst;
 
 	arm_mat_init_q15(&hz2mel_inst, MELVEC_LENGTH, SAMPLES_PER_MELVEC/2, hz2mel_mat);
@@ -130,6 +132,7 @@ void melvec_compute(q15_t *samples, q15_t *melvec)
 	arm_mat_init_q15(&melvec_inst, MELVEC_LENGTH, 1, melvec);
 
 	arm_mat_mult_fast_q15(&hz2mel_inst, &fftmag_inst, &melvec_inst, buf_tmp);
+	stop_cycle_count("step4");
 }
 
 /*

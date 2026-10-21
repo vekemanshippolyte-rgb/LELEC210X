@@ -153,7 +153,9 @@ int main(void)
 	while (1)
 	{
 		if ( is_processing ) {
+			HAL_GPIO_WritePin(GPOUT_GPIO_Port, GPOUT_Pin, GPIO_PIN_SET);
 			melvec_compute (( q15_t *) samples_buf_to_process , mel_vectors[cur_melvec]) ;
+			HAL_GPIO_WritePin(GPOUT_GPIO_Port, GPOUT_Pin, GPIO_PIN_RESET);
 			is_processing = 0;
 			if (++cur_melvec == N_MELVECS){
 				cur_melvec = 0;
