@@ -93,7 +93,8 @@ def main(
             payload = payload[len(FV_PREFIX) :]
 
             melvecs = payload_to_melvecs(payload, melvec_length, n_melvecs)
-            logger.debug(f"Parsed feature vector : {melvecs}")
+            fv = [melvecs.flatten()]
+            logger.debug(f"Parsed feature vector : {fv}")
 
             if m:
                 # TODO: perform classification with your model
