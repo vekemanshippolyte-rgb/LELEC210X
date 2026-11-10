@@ -28,7 +28,7 @@ load_dotenv()
 @click.option(
     "-m",
     "--model",
-    default=None,
+    default=".\classification\data\models\model.pickle",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
     help="Path to the trained classification model.",
 )
@@ -97,7 +97,7 @@ def main(
 
             if m:
                 # TODO: perform classification with your model
-                guess = "fire"
+                guess = model.predict(melvecs)
 
                 logger.info(f"FV classified as : {guess}")
 

@@ -51,6 +51,12 @@ void make_packet(void)
 	//// 1- Header ////
 	// Initially, the whole packet header is set to 0s
 	memset(packet, 0, HEADER_LENGTH);
+	packet[2] = (PAYLOAD_LENGTH >> 8) & 0xFF;
+	packet[3] = (PAYLOAD_LENGTH) & 0xFF;
+	packet[4] = (packet_serial >> 24) & 0xFF;
+	packet[5] = (packet_serial >> 16) & 0xFF;
+	packet[6] = (packet_serial >> 8) & 0xFF;
+	packet[7] = (packet_serial) & 0xFF;
 	// TODO replace the memset 0 by filling in each header field with the right value
 
 	//// 2- Payload ////
@@ -76,11 +82,16 @@ void make_packet(void)
 
     // TODO : Complete the CBC-MAC_AES algorithm
     // using the AES implementation provided in Drivers/AES/aes_ref.h
-    UNUSED(msg_in);
-    UNUSED(msg_len);
-    UNUSED(i);
-    UNUSED(AES_Key);
-
+	for (int i = 0; i<16;i++) {
+		*(state+i) = *(packet+i);
+	}
+	AES128_encrypt(state, AES_Key);
+	for (int j = 1; j < PACKET_LENGTH/16;j++) {
+		for (int k = 0; k<16;k++) {
+			*(state+k) = *(state+k) ^ *(packet+16*j+k);
+		}
+		AES128_encrypt(state, AES_Key);
+	}
     // Copy the result of CBC-MAC-AES to the tag.
     for (int j=0; j<16; j++) {
         tag[j] = state[j];
