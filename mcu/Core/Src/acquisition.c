@@ -56,7 +56,7 @@ int acquisition_stop(void)
 
 	// TODO P2b
 	HAL_TIM_Base_Stop(&htim3);
-	HAL_ADC_Stop(&hadc1);
+	HAL_ADC_Stop_DMA(&hadc1);
 	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
 	is_acq_running = 0;
