@@ -85,17 +85,17 @@ void make_packet(void)
     // using the AES implementation provided in Drivers/AES/aes_ref.h
 	AES128_encrypt(state, AES_Key);
 	for (i=0; i < msg_len/16; i++) {
-+        for (int j=0; j<16; j++) {
-+            state[j] ^= msg_in[16*i+j];
-+        }
-+        AES128_encrypt(state, AES_Key);
-+    }
-+    if (16*i != msg_len) {
-+        for (int j=0; j<msg_len-16*i; j++) {
-+            state[j] ^= msg_in[16*i+j];
-+        }
-+        AES128_encrypt(state, AES_Key);
-+    }
+        for (int j=0; j<16; j++) {
+            state[j] ^= msg_in[16*i+j];
+        }
+        AES128_encrypt(state, AES_Key);
+    }
+    if (16*i != msg_len) {
+        for (int j=0; j<msg_len-16*i; j++) {
+            state[j] ^= msg_in[16*i+j];
+        }
+        AES128_encrypt(state, AES_Key);
+    }
     // Copy the result of CBC-MAC-AES to the tag.
     for (int j=0; j<16; j++) {
         tag[j] = state[j];
