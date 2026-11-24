@@ -56,7 +56,17 @@ def demodulate(y, B, R, Fdev):
     nb_syms = int(len(y)/R)
 
     bits_hat = np.zeros(nb_syms)
+    T = nb_syms/B 
 
+    samples = np.asarray(y[: nb_syms * R]).reshape(nb_syms, R)
+    
+    n = np.arange(R)
+    phase = 2 * np.pi * (Fdev / B) * n / R
+    r1 = np.sum(samples * np.exp(-1j * phase), axis=1)
+    r0 = np.sum(samples * np.exp(1j * phase), axis=1)
+    
+    bits_hat = (np.abs(r1) > np.abs(r0)).astype(int)
+  
     return bits_hat
 
 
