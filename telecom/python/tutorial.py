@@ -33,8 +33,8 @@ class tutorial(gr.basic_block):
     docstring for block tutorial
     """
 
-    def __init__(self, offset):
-
+    def __init__(self, offset, amplitude):
+        self.amplitude = amplitude
         self.offset = offset
 
         gr.basic_block.__init__(
@@ -62,6 +62,9 @@ class tutorial(gr.basic_block):
             ninput_items_required[i] = noutput_items
         return ninput_items_required
 
+    def set_amplitude(self, amplitude):
+        self.logger.info(f"[Tutorial] Amplitude variable changed to {amplitude:.2f}")
+        self.amplitude = amplitude
 
     def set_offset(self, offset):
         self.logger.info(f"[Tutorial] Offset variable changed to {offset:.2f}")
@@ -75,9 +78,10 @@ class tutorial(gr.basic_block):
     def general_work(self, input_items, output_items):
 
         # Never produce more than the output buffer can hold (nor consume more than we produce)
+
         nitems = min(len(input_items[0]), len(output_items[0]))
 
-        output_items[0][:nitems] = input_items[0][:nitems] + (self.offset + 1j*self.offset)
+        output_items[0][:nitems] = self.amplitude *input_items[0][:nitems] + (self.offset + 1j*self.offset)
 
         self.consume_each(nitems)
 

@@ -15,10 +15,11 @@ uint8_t packet[PACKET_LENGTH];
 
 // Local variables
 static uint32_t packet_serial = 0;
-static const uint8_t AES_Key[16] = {0x22,0x22,0x22,0x22,
-									0x22,0x22,0x22,0x22,
-									0x22,0x22,0x22,0x22,
-									0x22,0x22,0x22,0x22};
+static const uint8_t AES_Key[16] = {0x00,0x00,0x00,0x00,
+									0x00,0x00,0x00,0x00,
+									0x00,0x00,0x00,0x00,
+									0x00,0x00,0x00,0x00
+					};
 
 // External variables
 extern q15_t mel_vectors[N_MELVECS][MELVEC_LENGTH];
@@ -83,7 +84,6 @@ void make_packet(void)
 
     // TODO : Complete the CBC-MAC_AES algorithm
     // using the AES implementation provided in Drivers/AES/aes_ref.h
-	AES128_encrypt(state, AES_Key);
 	for (i=0; i < msg_len/16; i++) {
         for (int j=0; j<16; j++) {
             state[j] ^= msg_in[16*i+j];

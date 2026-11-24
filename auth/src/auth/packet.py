@@ -71,6 +71,12 @@ class PacketUnwrapper:
             raise InvalidPacket("Wrong payload length.")
         if self.authenticate:
             # Validate tag in constant time
+            calculated_tag = tag_cbc_mac(packet[:-TAG_LEN], self.key)
+            received_tag = packet[-TAG_LEN:]
+
+            print("Tag received  :", received_tag.hex())
+            print("Tag calculated:", calculated_tag.hex())
+            print("Tags equal    :", bytes_eq(calculated_tag, received_tag))
             if not bytes_eq(
                 tag_cbc_mac(packet[:-TAG_LEN], self.key), packet[-TAG_LEN:]
             ):

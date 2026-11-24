@@ -85,8 +85,14 @@ def main(
     if model:
         with open(model, "rb") as file:
             m = pickle.load(file)
+
+        pca_path = model.parent / "pca.pickle"
+
+        with open(pca_path, "rb") as file:
+            pca = pickle.load(file)
     else:
         m = None
+    
 
     for payload in _input:
         if FV_PREFIX in payload:
@@ -98,7 +104,8 @@ def main(
 
             if m:
                 # TODO: perform classification with your model
-                guess = model.predict(melvecs)
+                fv_pca = pca.transform(fv)
+                guess = m.predict(fv_pca)[0]
 
                 logger.info(f"FV classified as : {guess}")
 
