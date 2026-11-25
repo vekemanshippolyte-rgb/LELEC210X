@@ -71,7 +71,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [72, 120.0]
+    coordinate: [0, 104.0]
     rotation: 180
     state: enabled
 - name: EsN0_max
@@ -102,7 +102,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '5'
+    value: '-10'
   states:
     bus_sink: false
     bus_source: false
@@ -162,7 +162,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '1'
+    value: '0'
   states:
     bus_sink: false
     bus_source: false
@@ -442,7 +442,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '0.5'
+    value: '0.038915'
   states:
     bus_sink: false
     bus_source: false

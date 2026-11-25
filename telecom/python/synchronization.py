@@ -28,7 +28,6 @@ from .utils import logging, parse_common_params
 
 
 def cfo_estimation(y, B, R, Fdev, N):
-    #return 0
     """
     Estimate the carrier frequency offset (CFO) using the Moose algorithm.
 
@@ -44,8 +43,16 @@ def cfo_estimation(y, B, R, Fdev, N):
     -------
     cfo : estimated frequency offset in Hz
     """
+    y = np.asarray(y)
+    N_l = N * R
 
-    return 0
+
+    first_block = y[:N_l]
+    second_block = y[N_l:2*N_l]
+    alpha = np.sum(np.conjugate(first_block) * second_block)
+
+    symbol_delay = N / B
+    return np.angle(alpha) / (2 * np.pi * symbol_delay)
 
 
 def sto_estimation(y, B, R, Fdev,sync_word):
